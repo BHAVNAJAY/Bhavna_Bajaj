@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Structify — BFHL Node Hierarchy Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --violet-950: #1a0533;
+      --violet-900: #2d0a5e;
+      --violet-800: #4a1080;
+      --violet-600: #7c3aed;
+      --violet-500: #8b5cf6;
+      --violet-400: #a78bfa;
+      --violet-300: #c4b5fd;
+      --violet-100: #ede9fe;
+      --violet-50:  #f5f3ff;
+      --white: #ffffff;
+      --text: #0f0a1a;
+      --text-muted: #4b3b6b;
+      --border: rgba(124, 58, 237, 0.18);
+      --shadow: 0 4px 32px rgba(109, 40, 217, 0.12);
+      --radius: 14px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── GRID BG ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,58,237,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,58,237,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, var(--violet-900) 0%, var(--violet-600) 100%);
+      padding: 48px 24px 40px;
+      text-align: center;
+      overflow: hidden;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0; right: 0;
+      height: 32px;
+      background: var(--white);
+      clip-path: ellipse(55% 100% at 50% 100%);
+    }
+    .header-orb {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(196, 181, 253, 0.15);
+      filter: blur(40px);
+    }
+    .header-orb.a { width: 280px; height: 280px; top: -80px; left: -60px; }
+    .header-orb.b { width: 200px; height: 200px; top: -40px; right: -40px; }
+
+    header h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      position: relative;
+    }
+    header h1 span {
+      color: var(--violet-300);
+    }
+    header p {
+      margin-top: 10px;
+      color: var(--violet-300);
+      font-size: 1rem;
+      font-weight: 400;
+      position: relative;
+    }
+
+    /* ── MAIN ── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.4s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--violet-600);
+      margin-bottom: 14px;
+    }
+
+    /* ── INPUT ── */
+    .input-section label {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .input-hint {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      padding: 14px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: var(--violet-50);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      line-height: 1.6;
+    }
+    textarea:focus {
+      border-color: var(--violet-500);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    }
+    textarea::placeholder { color: var(--violet-400); }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      flex: 1;
+      min-width: 140px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, var(--violet-600), var(--violet-800));
+      color: var(--white);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.3);
+      letter-spacing: 0.02em;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      padding: 14px 20px;
+      background: transparent;
+      color: var(--violet-600);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-secondary:hover { background: var(--violet-50); border-color: var(--violet-400); }
+
+    /* ── API URL ── */
+    .api-url-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .api-url-row input {
+      flex: 1;
+      padding: 10px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      background: var(--violet-50);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .api-url-row input:focus { border-color: var(--violet-500); }
+
+    /* ── SPINNER ── */
+    .spinner-wrap {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 0;
+      color: var(--violet-600);
+      font-weight: 600;
+    }
+    .spinner-wrap.active { display: flex; }
+    .spinner {
+      width: 22px; height: 22px;
+      border: 3px solid var(--violet-200);
+      border-top-color: var(--violet-600);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── ERROR ── */
+    .error-box {
+      display: none;
+      background: #fff1f2;
+      border: 1.5px solid #fca5a5;
+      border-radius: 10px;
+      padding: 16px 18px;
+      color: #b91c1c;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .error-box.active { display: block; animation: fadeUp 0.3s ease; }
+
+    /* ── RESPONSE ── */
+    #response-section { display: none; }
+    #response-section.active { display: block; }
+
+    /* ── SUMMARY GRID ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-chip {
+      background: linear-gradient(135deg, var(--violet-50), var(--white));
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 16px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(124,58,237,0.07);
+    }
+    .stat-chip .val {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--violet-700, var(--violet-800));
+      line-height: 1;
+    }
+    .stat-chip .lbl {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* ── IDENTITY BAR ── */
+    .identity-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .id-tag {
+      display: flex;
+      flex-direction: column;
+      background: var(--violet-50);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+    }
+    .id-tag .key {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--violet-600);
+    }
+    .id-tag .value {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    /* ── TREE SECTION ── */
+    .tree-list { display: flex; flex-direction: column; gap: 16px; }
+
+    .tree-item {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .tree-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: linear-gradient(90deg, var(--violet-50), var(--white));
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .tree-header:hover { background: var(--violet-100); }
+    .tree-root-badge {
+      background: var(--violet-600);
+      color: var(--white);
+      font-size: 0.85rem;
+      font-weight: 800;
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tree-root-badge.cycle { background: #dc2626; }
+    .tree-meta { flex: 1; }
+    .tree-meta strong {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      display: block;
+    }
+    .tree-meta small {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
+    .cycle-badge {
+      background: #fee2e2;
+      color: #b91c1c;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .depth-badge {
+      background: var(--violet-100);
+      color: var(--violet-800);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-family: 'DM Mono', monospace;
+    }
+    .chevron {
+      color: var(--violet-400);
+      font-size: 1rem;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .tree-header.expanded .chevron { transform: rotate(180deg); }
+
+    .tree-body {
+      display: none;
+      padding: 16px 18px;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+    }
+    .tree-body.open { display: block; animation: fadeUp 0.25s ease; }
+
+    /* ── TREE VISUAL ── */
+    .tree-visual {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: var(--text);
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .tree-line-root { color: var(--violet-700, var(--violet-800)); font-weight: 700; }
+    .tree-line-node { color: var(--text); }
+    .tree-line-connector { color: var(--violet-300); }
+
+    /* ── ENTRIES GRID ── */
+    .entries-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .entries-grid { grid-template-columns: 1fr; } }
+
+    .entry-box { }
+    .entry-box h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
+    }
+    .entry-box.invalid h3 { color: #b91c1c; }
+    .entry-box.duplicate h3 { color: #b45309; }
+    .entry-box.empty p { color: var(--text-muted); font-size: 0.82rem; font-style: italic; }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+    .tag.invalid { background: #fee2e2; color: #b91c1c; }
+    .tag.duplicate { background: #fef3c7; color: #92400e; }
+
+    /* ── RAW JSON ── */
+    .raw-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--violet-600);
+      user-select: none;
+      margin-bottom: 12px;
+    }
+    .raw-toggle .arrow { transition: transform 0.2s; font-size: 0.7rem; }
+    .raw-toggle.open .arrow { transform: rotate(90deg); }
+    #raw-json {
+      display: none;
+      background: var(--violet-950);
+      color: #e9d5ff;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      padding: 18px;
+      border-radius: 10px;
+      overflow-x: auto;
+      line-height: 1.6;
+      white-space: pre;
+    }
+    #raw-json.open { display: block; animation: fadeUp 0.25s ease; }
+
+    .section-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-orb a"></div>
+  <div class="header-orb b"></div>
+  <h1>Structify — <span>BFHL Node Hierarchy</span> Analyzer</h1>
+  <p>Parse node strings → detect trees, cycles, and graph structure</p>
+</header>
+
+<main>
+
+  <!-- API URL Config -->
+  <div class="card" style="animation-delay:0.05s">
+    <div class="card-title">API Configuration</div>
+    <div class="api-url-row">
+      <input type="text" id="api-url" placeholder="https://your-api.onrender.com" value="" />
+      <span style="font-size:0.8rem; color:var(--text-muted); font-family:'DM Mono',monospace; white-space:nowrap;">/bfhl</span>
+    </div>
+    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">Enter your backend base URL (without /bfhl). Leave blank to call <code style="font-family:'DM Mono',monospace;">/bfhl</code> on same origin.</p>
+  </div>
+
+  <!-- Input -->
+  <div class="card input-section" style="animation-delay:0.1s">
+    <div class="card-title">Input</div>
+    <label for="node-input">Enter node strings</label>
+    <p class="input-hint">One per line, or comma-separated — e.g. A->B, A->C, B->D</p>
+    <textarea id="node-input" placeholder="A->B&#10;A->C&#10;B->D&#10;X->Y&#10;Y->Z&#10;Z->X&#10;hello&#10;1->2"></textarea>
+    <div class="input-row">
+      <button class="btn-primary" id="submit-btn" onclick="submitData()">▶ Analyze Nodes</button>
+      <button class="btn-secondary" onclick="loadExample()">Load Example</button>
+      <button class="btn-secondary" onclick="clearAll()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div class="spinner-wrap" id="spinner">
+    <div class="spinner"></div>
+    <span>Processing nodes...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="error-box"></div>
+
+  <!-- Response -->
+  <div id="response-section">
+
+    <!-- Identity -->
+    <div class="card" style="animation-delay:0s">
+      <div class="card-title">Identity</div>
+      <div class="identity-bar" id="identity-bar"></div>
+    </div>
+
+    <!-- Summary -->
+    <div class="card" style="animation-delay:0.05s">
+      <div class="card-title">Summary</div>
+      <div class="summary-grid" id="summary-grid"></div>
+    </div>
+
+    <!-- Hierarchies -->
+    <div class="card" style="animation-delay:0.1s">
+      <div class="card-title">Hierarchies</div>
+      <div class="tree-list" id="tree-list"></div>
+    </div>
+
+    <!-- Invalid & Duplicates -->
+    <div class="card" style="animation-delay:0.15s">
+      <div class="card-title">Validation</div>
+      <div class="entries-grid" id="entries-grid"></div>
+    </div>
+
+    <!-- Raw JSON -->
+    <div class="card" style="animation-delay:0.2s">
+      <div class="raw-toggle" id="raw-toggle" onclick="toggleRaw()">
+        <span class="arrow">▶</span>
+        <span>View Raw JSON</span>
+      </div>
+      <pre id="raw-json"></pre>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  function loadExample() {
+    document.getElementById('node-input').value =
+      `A->B\nA->C\nB->D\nC->E\nE->F\nX->Y\nY->Z\nZ->X\nP->Q\nQ->R\nG->H\nG->H\nG->I\nhello\n1->2\nA->`;
+  }
+
+  function clearAll() {
+    document.getElementById('node-input').value = '';
+    document.getElementById('response-section').classList.remove('active');
+    document.getElementById('error-box').classList.remove('active');
+  }
+
+  async function submitData() {
+    const raw = document.getElementById('node-input').value.trim();
+    if (!raw) { showError('Please enter at least one node string.'); return; }
+    const data = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const baseUrl = document.getElementById('api-url').value.trim().replace(/\/+$/, '');
+    const url = baseUrl ? `${baseUrl}/bfhl` : '/bfhl';
+    setLoading(true);
+    hideError();
+    document.getElementById('response-section').classList.remove('active');
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const json = await res.json();
+      renderResponse(json);
+    } catch (e) {
+      showError(`API Error: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function renderResponse(data) {
+    const idBar = document.getElementById('identity-bar');
+    idBar.innerHTML = [
+      { key: 'User ID', val: data.user_id },
+      { key: 'Email', val: data.email_id },
+      { key: 'Roll No.', val: data.college_roll_number },
+    ].map(i => `<div class="id-tag"><span class="key">${i.key}</span><span class="value">${i.val}</span></div>`).join('');
+
+    const sg = document.getElementById('summary-grid');
+    const s = data.summary;
+    sg.innerHTML = [
+      { val: s.total_trees, lbl: 'Valid Trees' },
+      { val: s.total_cycles, lbl: 'Cycles' },
+      { val: s.largest_tree_root || '—', lbl: 'Largest Root' },
+      { val: data.hierarchies.length, lbl: 'Total Groups' },
+    ].map(c => `<div class="stat-chip"><div class="val">${c.val}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+
+    const tl = document.getElementById('tree-list');
+    tl.innerHTML = '';
+    data.hierarchies.forEach((h, i) => {
+      const isCycle = !!h.has_cycle;
+      const item = document.createElement('div');
+      item.className = 'tree-item';
+      const depthTag = !isCycle ? `<span class="depth-badge">depth ${h.depth}</span>` : '';
+      const cycleTag = isCycle ? `<span class="cycle-badge">⚠ Cycle</span>` : '';
+      item.innerHTML = `
+        <div class="tree-header" id="th-${i}" onclick="toggleTree(${i})">
+          <div class="tree-root-badge ${isCycle ? 'cycle' : ''}">${h.root}</div>
+          <div class="tree-meta">
+            <strong>Root: ${h.root}</strong>
+            <small>${isCycle ? 'Cyclic group — no valid tree' : `Tree with ${countNodes(h.tree)} node(s)`}</small>
+          </div>
+          ${depthTag}${cycleTag}
+          <span class="chevron">▾</span>
+        </div>
+        <div class="tree-body" id="tb-${i}">
+          ${isCycle
+            ? `<p style="color:#b91c1c;font-size:0.85rem;font-weight:600;">⚠ Cycle detected — tree structure cannot be rendered.</p>`
+            : `<div class="tree-visual">${renderTreeLines(h.tree, h.root)}</div>`}
+        </div>`;
+      tl.appendChild(item);
+    });
+
+    const eg = document.getElementById('entries-grid');
+    const inv = data.invalid_entries || [];
+    const dup = data.duplicate_edges || [];
+    eg.innerHTML = `
+      <div class="entry-box invalid">
+        <h3>Invalid Entries (${inv.length})</h3>
+        ${inv.length ? `<div class="tag-list">${inv.map(e => `<span class="tag invalid">${e || '""'}</span>`).join('')}</div>` : '<p class="empty"><em>None</em></p>'}
+      </div>
+      <div class="entry-box duplicate">
+        <h3>Duplicate Edges (${dup.length})</h3>
+        ${dup.length ? `<div class="tag-list">${dup.map(e => `<span class="tag duplicate">${e}</span>`).join('')}</div>` : '<p class="empty"><em>None</em></p>'}
+      </div>`;
+
+    document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+    document.getElementById('raw-json').classList.remove('open');
+    document.getElementById('raw-toggle').classList.remove('open');
+    document.getElementById('response-section').classList.add('active');
+    document.getElementById('response-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function countNodes(tree) {
+    if (!tree || typeof tree !== 'object') return 0;
+    let count = 0;
+    function walk(obj) { for (const key of Object.keys(obj)) { count++; walk(obj[key]); } }
+    walk(tree);
+    return count;
+  }
+
+  function renderTreeLines(treeObj, root) {
+    const lines = [];
+    function walkChild(node, prefix, isLast, subtree) {
+      const connector = isLast ? '└── ' : '├── ';
+      const childPrefix = isLast ? '    ' : '│   ';
+      lines.push(`<span class="tree-line-connector">${prefix}${connector}</span><span class="tree-line-node">${node}</span>`);
+      const children = Object.keys(subtree || {});
+      children.forEach((child, idx) => {
+        walkChild(child, prefix + childPrefix, idx === children.length - 1, subtree[child]);
+      });
+    }
+    lines.push(`<span class="tree-line-root">${root}</span>`);
+    const rootChildren = Object.keys(treeObj[root] || {});
+    rootChildren.forEach((child, idx) => {
+      const last = idx === rootChildren.length - 1;
+      const prefix = last ? '    ' : '│   ';
+      walkChild(child, '', last, (treeObj[root] || {})[child]);
+    });
+    return lines.join('\n');
+  }
+
+  function toggleTree(i) {
+    document.getElementById(`th-${i}`).classList.toggle('expanded');
+    document.getElementById(`tb-${i}`).classList.toggle('open');
+  }
+
+  function toggleRaw() {
+    document.getElementById('raw-json').classList.toggle('open');
+    document.getElementById('raw-toggle').classList.toggle('open');
+  }
+
+  function setLoading(v) {
+    document.getElementById('spinner').classList.toggle('active', v);
+    document.getElementById('submit-btn').disabled = v;
+  }
+  function showError(msg) {
+    const el = document.getElementById('error-box');
+    el.textContent = msg;
+    el.classList.add('active');
+  }
+  function hideError() {
+    document.getElementById('error-box').classList.remove('active');
+  }
+
+  document.getElementById('node-input').addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') submitData();
+  });
+</script>
+</body>
+</html>
